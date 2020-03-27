@@ -1,0 +1,171 @@
+{% extends 'template.html' %}
+
+{% block header %}
+{% endblock %}
+
+{% block content %}
+
+<div class="container" style="max-width:60%;">
+
+  <h2>Add Page Title</h2>
+
+    <!-- 'bg-dark' refers to a bootstrap standard background color. You can find
+    more bg colors here: https://getbootstrap.com/docs/4.0/utilities/colors/ 
+    and text colors here: https://getbootstrap.com/docs/4.0/utilities/colors/-->
+    <div class="bg-secondary text-white">
+      <div style="padding:20px;" >
+        <h5>Content Block</h5>
+          <p>Some sample content on the titanic<br>
+            Include more content here</p>
+      </div>
+    </div>
+
+  <div class="container">
+    <div id='chart'>
+    </div>
+  </div>
+
+  <div class="container" style="padding-bottom:50x;">
+    <div class="row d-flex justify-content-center"
+      <div class="dropdown">
+        <button class="btn btn-secondary dropdown-toggle" type="button"
+                id="dropdownMenuButton" data-toggle="dropdown"
+                aria-haspopup="true" aria-expanded="false">
+          Filter Results
+        </button>
+        <div class="dropdown-menu filter-data"
+             aria-labelledby="dropdownMenuButton">
+          <ul class="dropdown-item" id="first-class">First Class</ul>
+          <ul class="dropdown-item" id="second-class">Second Class</ul>
+          <ul class="dropdown-item" id="third-class">Third Class</ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<br>
+
+<div class="row">
+  <div class="center-table" style="max-width:90%;max-height:500px;">
+    <table id="data-table" class="table table-striped">
+      <!-- Populated by generateTable() -->
+    </table>
+  </div>
+</div>
+
+
+<br><br><br><br><br><br><br><br>
+
+<script>
+
+    ///////////////////////////////////////////////////////////////////////////
+    //                               Get Data                                //
+    ///////////////////////////////////////////////////////////////////////////
+
+    // {#
+    // {{ data|tojson }} - Jinja2 technique for reading a variable sent as 
+    // paramters by a function.
+    // Syntax explanation:
+    //   {{}} - Let's JavaScript know that we're using Jinja2 logic
+    //   data - Variable passed from the app.py file
+    //   tojson - Let's the application know that it's a json file
+    //   | - pipe command, pipes the data to the tojson function
+
+    // function getData(data) {
+    //   return data
+    // }
+    // #}
+
+    var data = JSON.parse({{ graphJSON|tojson }})
+
+    ///////////////////////////////////////////////////////////////////////////
+    //                             Plotly Chart                              //
+    ///////////////////////////////////////////////////////////////////////////
+
+    var surv_vals = Object.values(data["Survived"]);
+    var surv_clas = Object.keys(data["Survived"]);
+    var pawy_vals = Object.values(data["Passed Away"]);
+    var pawy_clas = Object.keys(data["Passed Away"]);
+    var surv_hovr = surv_vals.map(x =>
+    `${x} Passengers from this class survived`)
+    var pawy_hovr = pawy_vals.map(x =>
+    `${x} Passengers from this class passed away`)
+
+    var layout = {
+    title: "Survival Rate by Class on Titanic",
+    xaxis: {title: "Passenger Class"},
+    yaxis: {title: "Number of Passengers"}
+    };
+
+    var mlModel = {
+      name: "Survived",
+      x: surv_clas,
+      y: surv_vals,
+      text: surv_hovr,
+      hoverinfo: 'text',
+      marker: {color: "#1A44E8"},
+      type: "bar"
+    };
+
+    var rbModel = {
+      name: "Passed Away",
+      x: pawy_clas,
+      y: pawy_vals,
+      text: pawy_hovr,
+      hoverinfo: 'text',
+      marker: {color: "#1AB0E8"},
+      type: "bar"
+    };
+
+    var traces = [mlModel, rbModel]
+
+    Plotly.plot("chart", traces, layout);
+
+    ///////////////////////////////////////////////////////////////////////////
+    //                          Render Table Funcs                           //
+    ///////////////////////////////////////////////////////////////////////////
+
+    // Generates a table one row at a time
+    function generateTable(tableData) {
+      var table = '';
+      var keys = Object.keys(Object.values(tableData)[0]);
+      table += "<thead class='thead-dark'><tr>";
+      for (let i in keys) {
+        table += `<th class="align-middle">${keys[i]}</th>`;
+      }
+      table += "</tr></thead>"
+      $.each(tableData, function(key, value) {
+        table += "<tr>";
+        for (let i = 0; i < keys.length; i++) {
+          table += `<td>${value[keys[i]]}</td>`
+        }
+        table += "</tr>"
+      });
+      document.getElementById("data-table").innerHTML = table;
+    }
+
+    // Displays the page selected in the filter
+    $(".filter-data").children().click(function(event) {
+      var tableData;
+      var filter = event.target.id
+      switch (filter) {
+        case "first-class":
+          tableData = JSON.parse(getData({{ frst_classJSON|tojson }}))
+          $("#dropdownMenuButton").text("First Class");
+          break;
+        case "second-class":
+          tableData = JSON.parse(getData({{ scnd_classJSON|tojson }}))
+          $("#dropdownMenuButton").text("Second Class");
+          break;
+        case "third-class":
+          tableData = JSON.parse(getData({{ thrd_classJSON|tojson }}))
+          $("#dropdownMenuButton").text("Third Class");
+          break;
+      }
+      generateTable(tableData);
+    })
+
+</script>
+
+{% endblock %}
